@@ -7,7 +7,14 @@ require 'ffmpeg/version'
 require 'ffmpeg/movie'
 require 'ffmpeg/transcoder'
 require 'ffmpeg/encoding_options'
- 
+
+IO4 = if IO.respond_to?(:popen4)
+  IO
+else
+  require 'open4'
+  Open4
+end
+
 module FFMPEG
   # FFMPEG logs information about its progress when it's transcoding.
   # Jack in your own logger through this method if you wish to.
@@ -17,7 +24,7 @@ module FFMPEG
   def self.logger=(log)
     @logger = log
   end
-  
+
   # Get FFMPEG logger.
   #
   # @return [Logger]

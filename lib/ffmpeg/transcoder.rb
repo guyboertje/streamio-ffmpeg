@@ -5,7 +5,7 @@ module FFMPEG
     def initialize(movie, output_file, options = EncodingOptions.new, transcoder_options = {})
       @movie = movie
       @output_file = output_file
-      
+
       if options.is_a?(String) || options.is_a?(EncodingOptions)
         @raw_options = options
       elsif options.is_a?(Hash)
@@ -13,13 +13,13 @@ module FFMPEG
       else
         raise ArgumentError, "Unknown options format '#{options.class}', should be either EncodingOptions, Hash or String."
       end
-      
+
       @transcoder_options = transcoder_options
       @errors = []
-      
+
       apply_transcoder_options
     end
-    
+
     # ffmpeg <  0.8: frame=  413 fps= 48 q=31.0 size=    2139kB time=16.52 bitrate=1060.6kbits/s
     # ffmpeg >= 0.8: frame= 4855 fps= 46 q=31.0 size=   45306kB time=00:02:42.28 bitrate=2287.0kbits/
     def run
@@ -27,7 +27,7 @@ module FFMPEG
       FFMPEG.logger.info("Running transcoding...\n#{command}\n")
       output = ""
       last_output = nil
-      Open3.popen3(command) do |stdin, stdout, stderr|
+      IO4.popen4(command) do |pid, stdin, stdout, stderr|
         yield(0.0) if block_given?
         stderr.each("r") do |line|
           fix_encoding(line)
@@ -58,21 +58,21 @@ module FFMPEG
         FFMPEG.logger.error "Failed encoding...\n#{command}\n\n#{output}\n#{errors}\n"
         raise "Failed encoding.#{errors}Full output: #{output}"
       end
-      
+
       encoded
     end
-    
+
     def encoding_succeeded?
       unless File.exists?(@output_file)
         @errors << "no output file created"
         return false
       end
-      
+
       unless encoded.valid?
         @errors << "encoded file is invalid"
         return false
       end
-      
+
       if validate_duration?
         precision = @raw_options[:duration] ? 1.5 : 1.1
         desired_duration = @raw_options[:duration] && @raw_options[:duration] < @movie.duration ? @raw_options[:duration] : @movie.duration
@@ -81,14 +81,14 @@ module FFMPEG
           return false
         end
       end
-      
+
       true
     end
-    
+
     def encoded
       @encoded ||= Movie.new(@output_file)
     end
-    
+
     private
     def apply_transcoder_options
       return if @movie.calculated_aspect_ratio.nil?
@@ -105,14 +105,14 @@ module FFMPEG
         @raw_options[:resolution] = "#{new_width}x#{@raw_options.height}"
       end
     end
-    
+
     def validate_duration?
       return false if @movie.uncertain_duration?
       return false if %w(.jpg .png).include?(File.extname(@output_file))
       return false if @raw_options.is_a?(String)
       true
     end
-    
+
     def fix_encoding(output)
       output[/test/]
     rescue ArgumentError

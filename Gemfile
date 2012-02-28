@@ -2,4 +2,6 @@ source :rubygems
 
 gemspec
 
-gem "open4", "~> 1.3.0"
+if RUBY_PLATFORM !~ /java/
+  gem "open4", "~> 1.3.0"
+end

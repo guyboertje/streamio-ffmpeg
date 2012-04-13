@@ -6,15 +6,13 @@ module FFMPEG
 
     def initialize(path)
       raise Errno::ENOENT, "the file '#{path}' does not exist" unless File.exists?(path)
+      @path = path
 
-      @path = escape(path)
-
-      # stdin, stdout, stderr = Open3.popen3("#{FFMPEG.ffmpeg_binary} -i '#{path}'") # Output will land in stderr
-      pid, stdin, stdout, stderr = IO4.popen4("#{FFMPEG.ffmpeg_binary} -i '#{path}'") # Output will land in stderr
-
-      output = stderr.read
-
-      fix_encoding(output)
+      # ffmpeg will output to stderr
+      command = "#{FFMPEG.ffmpeg_binary} -i #{Shellwords.escape(path)}"
+      output = IO4.popen4(command) { |pid, stdin, stdout, stderr| stderr.read }
+      
+fix_encoding(output)
 
       output[/Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})/]
       @duration = ($1.to_i*60*60) + ($2.to_i*60) + $3.to_f
@@ -67,13 +65,7 @@ module FFMPEG
     end
 
     def calculated_aspect_ratio
-      if dar
-        w, h = dar.split(":")
-        w.to_f / h.to_f
-      else
-        aspect = width.to_f / height.to_f
-        aspect.nan? ? nil : aspect
-      end
+      aspect_from_dar || aspect_from_dimensions
     end
 
     def size
@@ -97,9 +89,16 @@ module FFMPEG
     end
 
     protected
-    def escape(path)
-      map  =  { '\\' => '\\\\', '</' => '<\/', "\r\n" => '\n', "\n" => '\n', "\r" => '\n', '"' => '\\"', "'" => "\\'" }
-      path.gsub(/(\\|<\/|\r\n|[\n\r"'])/) { map[$1] }
+    def aspect_from_dar
+      return nil unless dar
+      w, h = dar.split(":")
+      aspect = w.to_f / h.to_f
+      aspect.zero? ? nil : aspect
+    end
+    
+    def aspect_from_dimensions
+      aspect = width.to_f / height.to_f
+      aspect.nan? ? nil : aspect
     end
 
     def fix_encoding(output)

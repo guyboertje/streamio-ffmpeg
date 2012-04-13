@@ -8,6 +8,13 @@ module FFMPEG
         lambda { Movie.new("i_dont_exist") }.should raise_error(Errno::ENOENT, /does not exist/)
       end
     end
+    describe "given a file containing a single quotation mark in the filename" do
+      it "should run ffmpeg successfully" do
+        @movie = Movie.new("#{fixture_path}/movies/awesome'movie.mov")
+        @movie.duration.should == 7.56
+        @movie.frame_rate.should == 16.75
+      end
+    end
 
     describe "parsing" do
       describe "given a non movie file" do
@@ -27,6 +34,13 @@ module FFMPEG
 
         it "should have uncertain duration" do
           @movie.should be_uncertain_duration
+        end
+      end
+      describe "Errno::EMFILE: Too many open files" do
+        it "should not raise error" do
+          lambda {
+            128.times { Movie.new("#{fixture_path}/sounds/napoleon.mp3") }
+          }.should_not raise_error(Errno::EMFILE, /Too many open files/)
         end
       end
 
@@ -57,11 +71,27 @@ module FFMPEG
           @movie.calculated_aspect_ratio.to_s[0..15].should == "1.73827160493827" # substringed to be 1.9 compatible
         end
       end
+      
+      describe "given an impossible DAR" do
+        before(:all) do
+          fake_output = StringIO.new(File.read("#{fixture_path}/outputs/file_with_weird_dar.txt"))
+          Open3.stub!(:popen3).and_yield(nil,nil,fake_output)
+          @movie = Movie.new(__FILE__)
+        end
+        
+        it "should parse the DAR" do
+          @movie.dar.should == "0:1"
+        end
+
+        it "should calulate using width and height instead" do
+          @movie.calculated_aspect_ratio.to_s[0..15].should == "1.77777777777777" # substringed to be 1.9 compatible 
+        end
+      end
 
       describe "given a file with start-time" do
         before(:each) do
           fake_output = StringIO.new(File.read("#{fixture_path}/outputs/file_with_start_value.txt"))
-          IO4.stub!(:popen4).and_return([nil,nil,nil,fake_output])
+          IO4.stub!(:popen4).and_yield(nil, nil, nil, fake_output)
           @movie = Movie.new(__FILE__)
         end
 
@@ -73,7 +103,7 @@ module FFMPEG
       describe "given a file with ISO-8859-1 characters in output" do
         it "should not crash" do
           fake_output = StringIO.new(File.read("#{fixture_path}/outputs/file_with_iso-8859-1.txt"))
-          IO4.stub!(:popen4).and_return([nil,nil,nil,fake_output])
+          IO4.stub!(:popen4).and_yield(nil, nil, nil, fake_output)
           expect { Movie.new(__FILE__) }.to_not raise_error
         end
       end
@@ -81,7 +111,7 @@ module FFMPEG
       describe "given a file with 5.1 audio" do
         before(:each) do
           fake_output = StringIO.new(File.read("#{fixture_path}/outputs/file_with_surround_sound.txt"))
-          IO4.stub!(:popen4).and_return([nil,nil,nil,fake_output])
+          IO4.stub!(:popen4).and_yield(nil, nil, nil, fake_output)
           @movie = Movie.new(__FILE__)
         end
 
@@ -93,7 +123,7 @@ module FFMPEG
       describe "given a file with no audio" do
         before(:each) do
           fake_output = StringIO.new(File.read("#{fixture_path}/outputs/file_with_no_audio.txt"))
-          IO4.stub!(:popen4).and_return([nil,nil,nil,fake_output])
+          IO4.stub!(:popen4).and_yield(nil, nil, nil, fake_output)
           @movie = Movie.new(__FILE__)
         end
 
@@ -105,7 +135,7 @@ module FFMPEG
       describe "given a file with non supported audio" do
         before(:each) do
           fake_output = StringIO.new(File.read("#{fixture_path}/outputs/file_with_non_supported_audio.txt"))
-          IO4.stub!(:popen4).and_return([nil,nil,nil,fake_output])
+          IO4.stub!(:popen4).and_yield(nil, nil, nil, fake_output)
           @movie = Movie.new(__FILE__)
         end
 

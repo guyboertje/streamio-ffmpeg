@@ -11,6 +11,7 @@ module FFMPEG
     describe "given a file containing a single quotation mark in the filename" do
       it "should run ffmpeg successfully" do
         @movie = Movie.new("#{fixture_path}/movies/awesome'movie.mov")
+        p "", "^^^^^^^^^^^^^", @movie.path
         @movie.duration.should == 7.56
         @movie.frame_rate.should == 16.75
       end
@@ -71,20 +72,20 @@ module FFMPEG
           @movie.calculated_aspect_ratio.to_s[0..15].should == "1.73827160493827" # substringed to be 1.9 compatible
         end
       end
-      
+
       describe "given an impossible DAR" do
         before(:all) do
           fake_output = StringIO.new(File.read("#{fixture_path}/outputs/file_with_weird_dar.txt"))
-          Open3.stub!(:popen3).and_yield(nil,nil,fake_output)
+          IO4.stub!(:popen4).and_yield(nil, nil, nil, fake_output)
           @movie = Movie.new(__FILE__)
         end
-        
+
         it "should parse the DAR" do
           @movie.dar.should == "0:1"
         end
 
         it "should calulate using width and height instead" do
-          @movie.calculated_aspect_ratio.to_s[0..15].should == "1.77777777777777" # substringed to be 1.9 compatible 
+          @movie.calculated_aspect_ratio.to_s[0..15].should == "1.77777777777777" # substringed to be 1.9 compatible
         end
       end
 
@@ -147,6 +148,7 @@ module FFMPEG
       describe "given an awesome movie file" do
         before(:all) do
           @movie = Movie.new("#{fixture_path}/movies/awesome movie.mov")
+          p "", "^^^^^^^^^^^^^", @movie.path
         end
 
         it "should have uncertain duration (all movies are considered uncertain these days)" do

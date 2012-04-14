@@ -5,14 +5,17 @@ module FFMPEG
     attr_reader :audio_stream, :audio_codec, :audio_bitrate, :audio_sample_rate
 
     def initialize(path)
-      raise Errno::ENOENT, "the file '#{path}' does not exist" unless File.exists?(path)
-      @path = path
+      escaped_path = `ls #{Shellwords.escape(path)} 2>&1`.chomp
+
+
+      raise Errno::ENOENT, "the file '#{escaped_path}' does not exist" unless File.exists?(escaped_path)
+      @path = escaped_path
 
       # ffmpeg will output to stderr
-      command = "#{FFMPEG.ffmpeg_binary} -i #{Shellwords.escape(path)}"
+      command = "#{FFMPEG.ffmpeg_binary} -i \"#{Shellwords.escape(path)}\""
       output = IO4.popen4(command) { |pid, stdin, stdout, stderr| stderr.read }
-      
-fix_encoding(output)
+
+      fix_encoding(output)
 
       output[/Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})/]
       @duration = ($1.to_i*60*60) + ($2.to_i*60) + $3.to_f
@@ -95,7 +98,7 @@ fix_encoding(output)
       aspect = w.to_f / h.to_f
       aspect.zero? ? nil : aspect
     end
-    
+
     def aspect_from_dimensions
       aspect = width.to_f / height.to_f
       aspect.nan? ? nil : aspect

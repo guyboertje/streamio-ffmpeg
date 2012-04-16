@@ -11,7 +11,6 @@ module FFMPEG
     describe "given a file containing a single quotation mark in the filename" do
       it "should run ffmpeg successfully" do
         @movie = Movie.new("#{fixture_path}/movies/awesome'movie.mov")
-        p "", "^^^^^^^^^^^^^", @movie.path
         @movie.duration.should == 7.56
         @movie.frame_rate.should == 16.75
       end
@@ -148,7 +147,6 @@ module FFMPEG
       describe "given an awesome movie file" do
         before(:all) do
           @movie = Movie.new("#{fixture_path}/movies/awesome movie.mov")
-          p "", "^^^^^^^^^^^^^", @movie.path
         end
 
         it "should have uncertain duration (all movies are considered uncertain these days)" do

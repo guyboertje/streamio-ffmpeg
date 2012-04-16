@@ -5,14 +5,11 @@ module FFMPEG
     attr_reader :audio_stream, :audio_codec, :audio_bitrate, :audio_sample_rate
 
     def initialize(path)
-      escaped_path = `ls #{Shellwords.escape(path)} 2>&1`.chomp
-
-
-      raise Errno::ENOENT, "the file '#{escaped_path}' does not exist" unless File.exists?(escaped_path)
-      @path = escaped_path
+      raise Errno::ENOENT, "the file '#{path}' does not exist" unless File.exists?(path)
+      @path = path
 
       # ffmpeg will output to stderr
-      command = "#{FFMPEG.ffmpeg_binary} -i \"#{Shellwords.escape(path)}\""
+      command = "#{FFMPEG.ffmpeg_binary} -i \"#{path}\""
       output = IO4.popen4(command) { |pid, stdin, stdout, stderr| stderr.read }
 
       fix_encoding(output)
